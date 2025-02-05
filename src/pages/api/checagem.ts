@@ -52,7 +52,7 @@ const processarArquivos = async (planilha1Path: string, planilha2Path: string, v
 
     // Processar planilha 1 (Multas)
     // Lista de status que devem ser removidos
-    const statusInvalidos = [
+    const statusValidos = [
         "800 - Quitado por pagamento de parcelamento tipo PRD",
         "Baixado por adesão a conversão de multa",
         "Baixado por determinação judicial",
@@ -63,20 +63,21 @@ const processarArquivos = async (planilha1Path: string, planilha2Path: string, v
         "Excluído devido a duplicidade de lançamento",
         "Insuficiência de dados p/cobrança administrativa",
     ];
-
+    
     // Processar planilha 1 (Multas)
     sheet1.eachRow((row, rowNumber) => {
         if (rowNumber > 1) {
             const cpfcnpj: string = row.getCell(7).text?.replace(/\D/g, "") || "";
             const valorMulta: number = parseFloat(row.getCell(11).text?.replace(/[^\d,.-]/g, "").replace(",", ".") || "0");
-            const statusDebito: string = row.getCell(15).text?.trim() || ""; // Ajuste para a coluna correta do Status Débito
-
-            // Filtrar se o status for inválido
-            if (!statusInvalidos.includes(statusDebito) && valorMulta >= valorMinimo) {
+            const statusDebito: string = row.getCell(13).text?.trim() || ""; // Ajuste para a coluna correta do Status Débito
+    
+            // Manter apenas os registros com status válidos
+            if (statusValidos.includes(statusDebito) && valorMulta >= valorMinimo) {
                 listaMultas.push({ cpfcnpj, valorMulta });
             }
         }
     });
+    
 
 
     // Processar planilha 2 (Embargos)
