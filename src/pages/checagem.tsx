@@ -1,13 +1,20 @@
 import { useState } from "react";
 
 // Formatar valor como moeda (R$1.000,00)
-const formatarMoedaInput = (value: string) => {
-  if (!value) return "R$ 0,00";
-  value = value.replace(/\D/g, ""); // Remove tudo que não for número
+const formatarMoedaInput = (value: string | number) => {
+  if (typeof value === "number") {
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
 
-  let numero = parseFloat(value) / 100;
-  return numero.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-};
+  if (!value) return "R$ 0,00";
+
+  // Remove apenas pontos que são separadores de milhar (mantendo o separador decimal)
+  let numero = value.replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+  let parsed = parseFloat(numero);
+  if (isNaN(parsed)) return "R$ 0,00";
+  console.log(parsed)
+  return parsed.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+};;
 
 const formatarMoeda = (value: string | number) => {
   console.log(value);
@@ -122,7 +129,7 @@ export default function ChecagemPage() {
         <input 
           type="text" 
           className="form-control"
-          value={formatarMoeda(valorMinimo)} 
+          value={formatarMoedaInput(valorMinimo)} 
           onChange={handleValorMinimoChange} 
         />
       </div>
