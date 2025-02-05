@@ -1,9 +1,33 @@
 import { useState } from "react";
 
+// Formatar valor como moeda (R$1.000,00)
+const formatarMoedaInput = (value: string) => {
+  if (!value) return "R$ 0,00";
+  value = value.replace(/\D/g, ""); // Remove tudo que não for número
+
+  let numero = parseFloat(value) / 100;
+  return numero.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+};
+
+const formatarMoeda = (value: string | number) => {
+  if (typeof value !== "string") {
+    value = value.toString(); // Converte para string se for um número
+  }
+
+  if (!value) return "R$ 0,00";
+
+  value = value.replace(/\./g, "").replace(",", "."); // Corrige separadores
+
+  let numero = parseFloat(value); // ✅ Agora apenas converte corretamente, sem dividir por 100
+  return numero.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+};
+
+
 export default function ChecagemPage() {
   const [file1, setFile1] = useState<File | null>(null);
   const [file2, setFile2] = useState<File | null>(null);
-  const [valorMinimo, setValorMinimo] = useState<string>("500.000,00"); // Valor formatado
+  const [valorMinimo, setValorMinimo] = useState<string>("500000"); // Agora armazenamos sem formatação
+  const [valorMinimoFormatado, setValorMinimoFormatado] = useState<string>(formatarMoedaInput("500000")); // Armazena o valor formatado
   const [result, setResult] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -18,26 +42,17 @@ export default function ChecagemPage() {
     return value;
   };
 
-  // Formatar valor como moeda (R$1.000,00)
-  const formatarMoeda = (value: number | string) => {
-    let numero = typeof value === "number" ? value.toString() : value;
-    numero = numero.replace(/\D/g, ""); // Remove tudo que não for número
-    if (!numero) return "R$ 0,00";
-  
-    // Converte para número e formata corretamente
-    let formatted = (parseFloat(numero) / 100).toLocaleString("pt-BR", { 
-      style: "currency", 
-      currency: "BRL" 
-    });
-  
-    return formatted;
-  };
-  
-
-  // Atualiza o estado ao digitar o valor mínimo
+  // Atualiza o estado ao digitar o valor mínimo (sem formatação)
   const handleValorMinimoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    let value = event.target.value;
-    setValorMinimo(formatarMoeda(value));
+    let value = event.target.value.replace(/\D/g, ""); 
+    let valueForamted = (parseFloat(value) / 100).toString();
+    setValorMinimo(valueForamted);
+    
+    if (value.length > 0) {
+      setValorMinimoFormatado(formatarMoedaInput(value));
+    } else {
+      setValorMinimoFormatado("R$ 0,00");
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, setFile: (file: File | null) => void) => {
@@ -57,7 +72,7 @@ export default function ChecagemPage() {
     const formData = new FormData();
     formData.append("file1", file1);
     formData.append("file2", file2);
-    formData.append("valorMinimo", valorMinimo.replace(/[R$\.,]/g, "")); // Enviar valor sem formatação
+    formData.append("valorMinimo", valorMinimo); // Enviar sem formatação
 
     try {
       const response = await fetch("/api/checagem", {
@@ -66,7 +81,6 @@ export default function ChecagemPage() {
       });
 
       const data = await response.json();
-      console.log(data)
       setResult(data);
     } catch (error) {
       console.error("Erro ao processar arquivos:", error);
@@ -95,7 +109,7 @@ export default function ChecagemPage() {
         <input 
           type="text" 
           className="form-control"
-          value={valorMinimo} 
+          value={valorMinimoFormatado} 
           onChange={handleValorMinimoChange} 
         />
       </div>
@@ -110,9 +124,8 @@ export default function ChecagemPage() {
           <ul className="list-group">
             {result.map((item, index) => (
               <li key={index} className="list-group-item">
-              <strong>{formatarCpfCnpj(item.cpfcnpj)}</strong> - {item.nome} - Multa: {formatarMoeda(item.valorMulta)}
-            </li>
-            
+                <strong>{formatarCpfCnpj(item.cpfcnpj)}</strong> - {item.nome} - Multa: {formatarMoeda(item.valorMulta)}
+              </li>
             ))}
           </ul>
         </div>
