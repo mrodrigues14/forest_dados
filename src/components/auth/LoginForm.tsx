@@ -10,7 +10,7 @@ export default function LoginForm() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (email === "rmatheus440@gmail.com" && password === "123456") {
+    if (email === "teste@email.com" && password === "123") {
       localStorage.setItem("token", "user_authenticated"); // Salva o token no localStorage
       router.push("/"); // Redireciona para a página inicial
     } else {
