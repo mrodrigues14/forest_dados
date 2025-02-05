@@ -10,17 +10,29 @@ const formatarMoedaInput = (value: string) => {
 };
 
 const formatarMoeda = (value: string | number) => {
-  if (typeof value !== "string") {
-    value = value.toString(); // Converte para string se for um número
-  }
+  console.log(value);
 
-  if (!value) return "R$ 0,00";
+  // Converte para número caso seja string
+  let numero = typeof value === "string" ? parseInt(value, 10) : value;
 
-  value = value.replace(/\./g, "").replace(",", "."); // Corrige separadores
+  // Garante que seja um número válido
+  if (isNaN(numero)) return "0,00";
 
-  let numero = parseFloat(value); // ✅ Agora apenas converte corretamente, sem dividir por 100
-  return numero.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  // Divide por 100 para considerar os centavos
+  let valorCorrigido = numero / 100;
+
+  return valorCorrigido.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
+
+// Teste
+console.log(formatarMoeda(12760074)); // "127.600,74
+
+
+
+
 
 
 export default function ChecagemPage() {
@@ -28,7 +40,7 @@ export default function ChecagemPage() {
   const [file2, setFile2] = useState<File | null>(null);
   const [valorMinimo, setValorMinimo] = useState<string>("500000"); // Agora armazenamos sem formatação
   const [valorMinimoFormatado, setValorMinimoFormatado] = useState<string>(formatarMoedaInput("500000")); // Armazena o valor formatado
-  const [result, setResult] = useState<any[]>([]);
+  const [result, setResult] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Formatar CPF ou CNPJ corretamente
@@ -72,7 +84,8 @@ export default function ChecagemPage() {
     const formData = new FormData();
     formData.append("file1", file1);
     formData.append("file2", file2);
-    formData.append("valorMinimo", valorMinimo); // Enviar sem formatação
+    formData.append("valorMinimo", valorMinimo.toString()); // Agora enviamos um número corretamente
+
 
     try {
       const response = await fetch("/api/checagem", {
@@ -109,7 +122,7 @@ export default function ChecagemPage() {
         <input 
           type="text" 
           className="form-control"
-          value={valorMinimoFormatado} 
+          value={formatarMoeda(valorMinimo)} 
           onChange={handleValorMinimoChange} 
         />
       </div>
@@ -118,13 +131,32 @@ export default function ChecagemPage() {
         {loading ? "Processando..." : "Checar Dados"}
       </button>
 
-      {result.length > 0 && (
+      {/* Exibir detalhes do CPF consultado */}
+      {result && result.cpf && (
         <div className="mt-4">
-          <h3>Resultados:</h3>
+          <h3>Dados do CPF Consultado</h3>
           <ul className="list-group">
-            {result.map((item, index) => (
+            <li className="list-group-item"><strong>CPF:</strong> {formatarCpfCnpj(result.cpf)}</li>
+            <li className="list-group-item"><strong>Nome:</strong> {result.nome || "Não encontrado"}</li>
+            <li className="list-group-item"><strong>Multa:</strong> {formatarMoeda(result.valorMulta)}</li>
+            <li className="list-group-item">
+              <strong>Telefones:</strong> {result.telefones?.length > 0 ? result.telefones.join(", ") : "Não encontrado"}
+            </li>
+            <li className="list-group-item">
+              <strong>Emails:</strong> {result.emails?.length > 0 ? result.emails.join(", ") : "Não encontrado"}
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {/* Exibir lista de outros CPFs/CNPJs encontrados */}
+      {result && Array.isArray(result.outros) && result.outros.length > 0 && (
+        <div className="mt-4">
+          <h3>Outros CPFs/CNPJs Encontrados</h3>
+          <ul className="list-group">
+            {result.outros.map((item: { cpfcnpj: string; valorMulta: number }, index: number) => (
               <li key={index} className="list-group-item">
-                <strong>{formatarCpfCnpj(item.cpfcnpj)}</strong> - {item.nome} - Multa: {formatarMoeda(item.valorMulta)}
+                <strong>{formatarCpfCnpj(item.cpfcnpj)}</strong> - Multa: R${formatarMoeda(item.valorMulta)}
               </li>
             ))}
           </ul>
