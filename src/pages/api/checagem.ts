@@ -51,25 +51,53 @@ const processarArquivos = async (planilha1Path: string, planilha2Path: string, v
     const listaEmbargos: string[] = [];
 
     // Processar planilha 1 (Multas)
+    // Lista de status que devem ser removidos
+    const statusInvalidos = [
+        "800 - Quitado por pagamento de parcelamento tipo PRD",
+        "Baixado por adesão a conversão de multa",
+        "Baixado por determinação judicial",
+        "Cancelado",
+        "Cancelado na homologação (AI sem defesa)",
+        "Cancelado por falecimento ocorrido antes da const. do créd.",
+        "Excluído",
+        "Excluído devido a duplicidade de lançamento",
+        "Insuficiência de dados p/cobrança administrativa",
+    ];
+
+    // Processar planilha 1 (Multas)
     sheet1.eachRow((row, rowNumber) => {
         if (rowNumber > 1) {
-            const cpfcnpj: string = row.getCell(7).text?.replace(/\D/g, "") || ""; 
-            const valorMulta = formatarNumero(row.getCell(11).text || "0");
+            const cpfcnpj: string = row.getCell(7).text?.replace(/\D/g, "") || "";
+            const valorMulta: number = parseFloat(row.getCell(11).text?.replace(/[^\d,.-]/g, "").replace(",", ".") || "0");
+            const statusDebito: string = row.getCell(15).text?.trim() || ""; // Ajuste para a coluna correta do Status Débito
 
-            
-            if (valorMulta >= valorMinimo) {
+            // Filtrar se o status for inválido
+            if (!statusInvalidos.includes(statusDebito) && valorMulta >= valorMinimo) {
                 listaMultas.push({ cpfcnpj, valorMulta });
             }
         }
     });
 
+
+    // Processar planilha 2 (Embargos)
     // Processar planilha 2 (Embargos)
     sheet2.eachRow((row, rowNumber) => {
         if (rowNumber > 1) {
-            const cpfcnpj: string = row.getCell(6).text?.replace(/\D/g, "") || "";
-            if (cpfcnpj) listaEmbargos.push(cpfcnpj);
+            const rowValues = sheet2.getRow(1).values;
+            if (Array.isArray(rowValues)) {
+                const cpfcnpj: string = row.getCell( // Alterando a posição da coluna correta
+                    rowValues.findIndex((cell: any) =>
+                        typeof cell === "string" && cell.toLowerCase().includes("cpf ou cnpj")
+                    )
+                )?.text?.replace(/\D/g, "") || "";
+
+                if (cpfcnpj) listaEmbargos.push(cpfcnpj);
+            } else {
+                console.error('Row values are not an array');
+            }
         }
     });
+
 
     // Comparar CPFs/CNPJs e exibir apenas os que aparecem nas duas planilhas
     const cpfsComuns: Multa[] = listaMultas.filter(multa => listaEmbargos.includes(multa.cpfcnpj));
